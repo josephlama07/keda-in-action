@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+      - name: vegeta
+        image: peterevans/vegeta:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          sleep 10
+          echo "GET http://python-app.default.svc.cluster.local/" | \
+            vegeta attack -rate=50/s -duration=1h -workers=10 | \
+            vegeta report
+        resources:
+          requests:
+            cpu: 200m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi

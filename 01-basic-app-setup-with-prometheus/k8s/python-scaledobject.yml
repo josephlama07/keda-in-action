@@ -1,0 +1,46 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: python-app-scaler
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: python-app
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 30
+  cooldownPeriod: 180
+  fallback:
+    failureThreshold: 3
+    replicas: 2
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 180
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+          selectPolicy: Min
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+          - type: Pods
+            value: 2
+            periodSeconds: 30
+          selectPolicy: Max
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-monitoring-kube-prometheus.monitoring.svc.cluster.local:9090
+      query: |
+        sum(rate(python_app_requests_total[1m]))
+      threshold: '20'
+      activationThreshold: '5'
